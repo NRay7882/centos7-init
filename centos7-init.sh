@@ -17,10 +17,21 @@
 #ROOTPASS="puppet"
 ISOPATH="/Users/nraymond-mac2k14/sandbox/images/iso/CentOS-7-x86_64-Everything-1503-01.iso"
 
+#	[PARAMS] Params for status messages
+NOCOLOR='\033[0m'
+GREENCOLOR='\033[1;92m'
+OKECHO="echo -e [ ${GREENCOLOR}OK!${NOCOLOR} ] -	"
+YELLOWCOLOR='\033[01;33m'
+WARNECHO="echo -e [${YELLOWCOLOR}WARN:${NOCOLOR}] -	"
+REDCOLOR='\033[1;91m'
+ERRORECHO="echo -e [${REDCOLOR}ERROR${NOCOLOR}]	-	"
+WHITECOLOR='\033[1;53m'
+INFOECHO="echo -e [${WHITECOLOR}INFO:${NOCOLOR}] -	"
+
 #	Check for existing CentOS ISO
-echo "Checking for CentOS ISO..."
-ISOSUCCESS="echo ISO exists, checking for Homebrew..."
-ISOFAILURE="echo ERROR: ISO file missing from path $ISOPATH"
+$INFOECHO "Checking for CentOS ISO..."
+ISOSUCCESS="${OKECHO}ISO exists, checking for Homebrew..."
+ISOFAILURE="${ERRORECHO}ISO file missing from path $ISOPATH"
 if [ ! -f "$ISOPATH" ]; then
 	$ISOFAILURE
 	exit 1
@@ -30,8 +41,8 @@ fi
 
 #	Check to see if Homebrew is already installed
 HOMEBREWCHECK="brew info"
-HOMEBREWSUCCESS="echo Homebrew installed, checking for wget..."
-HOMEBREWFAILED="echo Homebrew not installed, installing from brew.sh..."
+HOMEBREWSUCCESS="${OKECHO} Homebrew installed, checking for wget..."
+HOMEBREWFAILED="${WARNECHO} Homebrew not installed, installing from brew.sh..."
 if $HOMEBREWCHECK > /dev/null; then
 	$HOMEBREWSUCCESS
 else
@@ -43,56 +54,58 @@ fi
 
 #	Check for wget
 WGETCHECK="brew list wget"
-WGETSUCCESS="wget is installed, checking for Lynx..."
-WGETFAILED="wget is not installed, installing..."
+WGETSUCCESS="${OKECHO} wget is installed, checking for Lynx..."
+WGETFAILED="${WARNECHO} wget is not installed, installing..."
 if $WGETCHECK > /dev/null; then
-	echo $WGETSUCCESS
+	$WGETSUCCESS
 else
-	echo $WGETFAILED
+	$WGETFAILED
 	brew install wget
-	echo $WGETSUCCESS
+	$WGETSUCCESS
 fi
 #	Check for wget
 LYNXCHECK="brew list lynx"
-LYNXSUCCESS="lynx is installed, checking for Virtualbox..."
-LYNXFAILED="lynx is not installed, installing..."
+LYNXSUCCESS="${OKECHO} lynx is installed, checking for Virtualbox..."
+LYNXFAILED="${WARNECHO} lynx is not installed, installing..."
 if $LYNXCHECK > /dev/null; then
-	echo $LYNXSUCCESS
+	$LYNXSUCCESS
 else
-	echo $LYNXFAILED
+	$LYNXFAILED
 	brew install lynx
-	echo $LYNXSUCCESS
+	$LYNXSUCCESS
 fi
 
 #	Check for current install of Virtualbox
 vboxmanage --version > /dev/null 2>&1
 if [ $? -ne 0 ]; then
-	echo "Virtalbox was not found, checking for the latest version..."
-	VBOXCHECK="missing"
+	$WARNECHO "Virtalbox not found locally, checking for the latest version..."
+	VBOXLOCALCHECK="missing"
 else
-	VBOXFULLVERSION="$(vboxmanage --version)"
-	echo "Virtalbox version $VBOXFULLVERSION found, checking for the latest version..."
-	VBOXCHECK="installed"
+	VBOXLOCALVERSION="$(vboxmanage --version)"
+	VBOXLOCALVERSION="$(echo $VBOXLOCALVERSION | cut -d "r" -f 1)"
+	$INFOECHO "Virtalbox local version $VBOXLOCALVERSION found, checking latest version..."
+	VBOXLOCALCHECK="installed"
 fi
 
 #	Check for latest version of Virtualbox
-VBOXINDEX="http://download.virtualbox.org/virtualbox"
-VBOXVERSIONREGEX="[5-9]\.[0-9]\.[0-9]{1,2}/"
-VBOXLATESTVERSION="$(lynx -dump -listonly $VBOXINDEX/ | egrep '[5-9]\.[0-9]\.[0-9]{1,2}/')"
-echo $VBOXLATESTVERSION
-if [[ $VBOXCHECK -eq "installed" ]]; then
-	VBOXVERSION="$(echo $VBOXFULLVERSION | cut -d "r" -f 1)"
-	VBOXBUILD="$(echo $VBOXFULLVERSION | cut -d "r" -f 2)"
-fi
+VBOXINDEXURL="http://download.virtualbox.org/virtualbox"
+VBOXINDEXREGEX='[5-9]\.[0-9]\.[0-9]{1,2}/'
+VBOXMATCHURL="$(lynx -dump -listonly $VBOXINDEXURL/ | egrep $VBOXINDEXREGEX)"
+VBOXREMOTEURL="$(echo $VBOXMATCHURL | cut -d " " -f 2)"
+VBOXREMOTEURL="$(echo $VBOXREMOTEURL | cut -d "/" -f 1-5)"
+VBOXREMOTEVERSION="$(echo -e $VBOXREMOTEURL/$VBOX | cut -d "/" -f 5)"
+VBOXREMOTEREGEX="[VirtualBox]-$VBOXREMOTEVERSION-[0-9]{1,6}-OSX.dmg"
+VBOXREMOTEFILENAME="$(lynx -crawl -dump -listonly $VBOXREMOTEURL/ | egrep $VBOXREMOTEREGEX)"
+VBOXREMOTEFILENAME="$(echo $VBOXREMOTEFILENAME | cut -d " " -f 1)"
+VBOXREMOTEFULLPATH="$VBOXREMOTEURL/$VBOXREMOTEFILENAME"
+if ([[ $VBOXLOCALCHECK == "installed" ]] && [[ $VBOXLOCALVERSION == $VBOXREMOTEVERSION ]]); then
+	$OKECHO "Remote version $VBOXREMOTEVERSION matches local version $VBOXLOCALVERSION, no action required...";
+fi;
 
-#wget -r --accept-regex '[5-9]\.[0-9]\.[0-99]/' --spider --no-check-certificate  $TEMPVAR
-#VBOXVERREGEX="[5-9]\.[0-9]\.[0-99]"
-#VBOXBUILDREGEX="[0-9]{6}"
-#VBOXINSTALL="VirtualBox-$VBOXVERREGEX-$VBOXBUILDREGEX-OSX.dmg"
-#VBOXGUEST="VBoxGuestAdditions_VBOXREGEX.iso"
+if ([[ $VBOXLOCALCHECK == "installed" ]] && [ $VBOXLOCALVERSION \< $VBOXREMOTEVERSION ]); then
+	$WARNECHO "Remote version $VBOXREMOTEVERSION is newer than local version $VBOXLOCALVERSION, uninstalling old version...";
+fi;
 
 
 
 #	If version is older than latest, install latest
-
-#	
