@@ -15,8 +15,10 @@
 #USER="puppet"
 #PASS="puppet"
 #ROOTPASS="puppet"
+OSXUSER="nraymond-mac2k14"
 ISOPATH="/Users/nraymond-mac2k14/sandbox/images/iso/CentOS-7-x86_64-Everything-1503-01.iso"
 
+###############################################################################
 #	[PARAMS] Params for status messages
 NOCOLOR='\033[0m'
 GREENCOLOR='\033[1;92m'
@@ -28,8 +30,32 @@ ERRORECHO="echo -e [${REDCOLOR}ERROR${NOCOLOR}]	-	"
 WHITECOLOR='\033[1;53m'
 INFOECHO="echo -e [${WHITECOLOR}INFO:${NOCOLOR}] -	"
 
+#	[Make temp dir]
+$INFOECHO "Beginning init process, creating temp dir..."
+RUNPATH=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)
+TEMPDIR="${RUNPATH}/temp"
+if [ -d $TEMPDIR ]; then
+	$WARNECHO "temp dir already found, removing..."
+	rm -rf $TEMPDIR
+	mktemp -d $TEMPDIR > /dev/null
+	$OKECHO "temp dir created, adding ${OSXUSER} to admin group..."
+else
+	mktemp -d $TEMPDIR > /dev/null
+	$OKECHO "temp dir created, adding ${OSXUSER} to admin group..."
+fi
+###############################################################################
+
+#	Ensure user account is added to the admin group
+sudo dseditgroup -o edit -a $OSXUSER -t user admin > /dev/null
+$OKECHO "${OSXUSER} added, checking for CentOS ISO file..."
+
+#	Check for existing admin sudoless password line
+#%wheel	ALL=(ALL) NOPASSWD: ALL
+
+
+
+
 #	Check for existing CentOS ISO
-$INFOECHO "Checking for CentOS ISO..."
 ISOSUCCESS="${OKECHO}ISO exists, checking for Homebrew..."
 ISOFAILURE="${ERRORECHO}ISO file missing from path $ISOPATH"
 if [ ! -f "$ISOPATH" ]; then
@@ -79,7 +105,6 @@ fi
 vboxmanage --version > /dev/null 2>&1
 if [ $? -ne 0 ]; then
 	$WARNECHO "Virtalbox not found locally, checking for the latest version..."
-	VBOXLOCALCHECK="missing"
 else
 	VBOXLOCALVERSION="$(vboxmanage --version)"
 	VBOXLOCALVERSION="$(echo $VBOXLOCALVERSION | cut -d "r" -f 1)"
@@ -98,12 +123,22 @@ VBOXREMOTEREGEX="[VirtualBox]-$VBOXREMOTEVERSION-[0-9]{1,6}-OSX.dmg"
 VBOXREMOTEFILENAME="$(lynx -crawl -dump -listonly $VBOXREMOTEURL/ | egrep $VBOXREMOTEREGEX)"
 VBOXREMOTEFILENAME="$(echo $VBOXREMOTEFILENAME | cut -d " " -f 1)"
 VBOXREMOTEFULLPATH="$VBOXREMOTEURL/$VBOXREMOTEFILENAME"
+
+#	Determine if install, uninstall/install or nothing needs to occur
 if ([[ $VBOXLOCALCHECK == "installed" ]] && [[ $VBOXLOCALVERSION == $VBOXREMOTEVERSION ]]); then
 	$OKECHO "Remote version $VBOXREMOTEVERSION matches local version $VBOXLOCALVERSION, no action required...";
 fi;
 
 if ([[ $VBOXLOCALCHECK == "installed" ]] && [ $VBOXLOCALVERSION \< $VBOXREMOTEVERSION ]); then
 	$WARNECHO "Remote version $VBOXREMOTEVERSION is newer than local version $VBOXLOCALVERSION, uninstalling old version...";
+	TEMPVBOXRAW="${TEMPDIR}/virtualboxitems-raw.txt"
+	TEMPVBOXLIST="${TEMPDIR}/virtualboxitems-list.txt"
+	mdfind -name "VirtualBox" > $TEMPVBOXRAW
+	grep "/Applications/VirtualBox.app" $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST && 
+	grep "/Library/Application Support/VirtualBox" $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST && 
+	grep "/Users/${OSXUSER}/Library/LaunchAgents/org.virtualbox.vboxwebsrv.plist" $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST && 
+	grep "/Users/${OSXUSER}/Library/VirtualBox" $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST && 
+	grep "/usr/local/bin/VirtualBox" $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST
 fi;
 
 
