@@ -1,9 +1,0 @@
-/Applications/VirtualBox.app
-/Library/Application Support/VirtualBox/LaunchDaemons/org.virtualbox.startup.plist
-/Library/Application Support/VirtualBox/LaunchDaemons/VirtualBoxStartup.sh
-/Library/Application Support/VirtualBox
-/Users/nraymond-mac2k14/Library/LaunchAgents/org.virtualbox.vboxwebsrv.plist
-/Users/nraymond-mac2k14/Library/VirtualBox/VirtualBox.xml-prev
-/Users/nraymond-mac2k14/Library/VirtualBox/VirtualBox.xml
-/Users/nraymond-mac2k14/Library/VirtualBox
-/usr/local/bin/VirtualBox
