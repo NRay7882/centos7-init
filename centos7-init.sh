@@ -9,14 +9,16 @@
 #
 ###############################################################################
 
-#	[PARAMS] Configure variables using the parameters below
-#HOSTNAME="pp-centos7-n01"
-#IP="192.168.56.101"
-#USER="puppet"
-#PASS="puppet"
-#ROOTPASS="puppet"
-OSXUSER="nraymond-mac2k14"
-ISOPATH="/Users/nraymond-mac2k14/sandbox/images/iso/CentOS-7-x86_64-Everything-1503-01.iso"
+#< < < < < < < < C O N F I G U R E   P A R A M S   H E R E > > > > > > > > >
+#	[PARAMS] Used for permissions, dir structure, and VM details (optional)
+OSXUSER="nraymond-mac2k14" && USERPATH="/Users/${OSXUSER}" #dev account, admin/root access
+ISOPATH="${USERPATH}/sandbox/images/iso/CentOS-7-x86_64-Everything-1503-01.iso" #path to VM ISO
+#VBOXNAME="pp-centos7-n01" #name for VirtualBox instance
+#VMHOSTNAME="pp-centos7-n01.base" #hostname
+#VMIPADDR="192.168.56.101" #VM virtual IP
+#VMUSER="puppet" #user id for VM
+#VMPASS="puppet" #user password for VM
+#VMROOTPASS="puppet" # set VM root password
 
 ###############################################################################
 #	[PARAMS] Params for status messages
@@ -125,20 +127,34 @@ VBOXREMOTEFILENAME="$(echo $VBOXREMOTEFILENAME | cut -d " " -f 1)"
 VBOXREMOTEFULLPATH="$VBOXREMOTEURL/$VBOXREMOTEFILENAME"
 
 #	Determine if install, uninstall/install or nothing needs to occur
+#	Latest, do nothing
 if ([[ $VBOXLOCALCHECK == "installed" ]] && [[ $VBOXLOCALVERSION == $VBOXREMOTEVERSION ]]); then
 	$OKECHO "Remote version $VBOXREMOTEVERSION matches local version $VBOXLOCALVERSION, no action required...";
 fi;
 
+#	If newer found, uninstall old version
 if ([[ $VBOXLOCALCHECK == "installed" ]] && [ $VBOXLOCALVERSION \< $VBOXREMOTEVERSION ]); then
 	$WARNECHO "Remote version $VBOXREMOTEVERSION is newer than local version $VBOXLOCALVERSION, uninstalling old version...";
+
+#	Create items list to be removed
 	TEMPVBOXRAW="${TEMPDIR}/virtualboxitems-raw.txt"
 	TEMPVBOXLIST="${TEMPDIR}/virtualboxitems-list.txt"
 	mdfind -name "VirtualBox" > $TEMPVBOXRAW
-	grep "/Applications/VirtualBox.app" $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST && 
-	grep "/Library/Application Support/VirtualBox" $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST && 
-	grep "/Users/${OSXUSER}/Library/LaunchAgents/org.virtualbox.vboxwebsrv.plist" $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST && 
-	grep "/Users/${OSXUSER}/Library/VirtualBox" $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST && 
-	grep "/usr/local/bin/VirtualBox" $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST
+	VBOXDELETEARRAY=(
+					[backup="${USERPATH}/VirtualBox VMs"]
+					[remove]="/Applications/VirtualBox.app"
+					[remove]="/Library/Application Support/VirtualBox"
+					[remove]="${USERPATH}/Library/LaunchAgents/org.virtualbox.vboxwebsrv.plist"
+					[remove]="${USERPATH}/Library/VirtualBox"
+					[remove]="/usr/local/bin/VirtualBox"
+
+		)
+	echo ${VBOXDELETEARRAY[0]}
+	grep  $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST && 
+	grep  $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST && 
+	grep  $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST && 
+	grep  $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST && 
+	grep  $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST
 fi;
 
 
