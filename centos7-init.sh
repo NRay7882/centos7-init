@@ -18,9 +18,11 @@ ISOPATH="${USERPATH}/sandbox/images/iso/CentOS-7-x86_64-Everything-1503-01.iso" 
 #VMIPADDR="192.168.56.101" #VM virtual IP
 #VMUSER="puppet" #user id for VM
 #VMPASS="puppet" #user password for VM
-#VMROOTPASS="puppet" # set VM root password
+#VMROOTPASS="puppet" #set VM root password
+VMFILEPATH="${USERPATH}/VirtualBox VMs" #Set to where your VM image files are stored
 
 ###############################################################################
+
 #	[PARAMS] Params for status messages
 NOCOLOR='\033[0m'
 GREENCOLOR='\033[1;92m'
@@ -136,25 +138,25 @@ fi;
 if ([[ $VBOXLOCALCHECK == "installed" ]] && [ $VBOXLOCALVERSION \< $VBOXREMOTEVERSION ]); then
 	$WARNECHO "Remote version $VBOXREMOTEVERSION is newer than local version $VBOXLOCALVERSION, uninstalling old version...";
 
+#	If VMs found, create backup first
+if
+
 #	Create items list to be removed
 	TEMPVBOXRAW="${TEMPDIR}/virtualboxitems-raw.txt"
 	TEMPVBOXLIST="${TEMPDIR}/virtualboxitems-list.txt"
 	mdfind -name "VirtualBox" > $TEMPVBOXRAW
+	VBOXBACKUP="${USERPATH}/VirtualBox VMs"
 	VBOXDELETEARRAY=(
-					[backup="${USERPATH}/VirtualBox VMs"]
-					[remove]="/Applications/VirtualBox.app"
-					[remove]="/Library/Application Support/VirtualBox"
-					[remove]="${USERPATH}/Library/LaunchAgents/org.virtualbox.vboxwebsrv.plist"
-					[remove]="${USERPATH}/Library/VirtualBox"
-					[remove]="/usr/local/bin/VirtualBox"
-
+		[0]="/Applications/VirtualBox.app"
+		[1]="^/Library/Application\sSupport/VirtualBox"
+		[2]="${USERPATH}/Library/LaunchAgents/org.virtualbox.vboxwebsrv.plist"
+		[3]="${USERPATH}/Library/VirtualBox"
+		[4]="/usr/local/bin/VirtualBox"
 		)
-	echo ${VBOXDELETEARRAY[0]}
-	grep  $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST && 
-	grep  $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST && 
-	grep  $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST && 
-	grep  $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST && 
-	grep  $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST
+	for i in "${VBOXDELETEARRAY[@]}"
+	do
+		grep $i $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST
+	done
 fi;
 
 
