@@ -11,6 +11,6 @@ ISOPATH="${USERPATH}/sandbox/images/iso/CentOS-7-x86_64-Everything-1503-01.iso" 
 #VMUSER="puppet" #user id for VM
 #VMPASS="puppet" #user password for VM
 #VMROOTPASS="puppet" #set VM root password
-VMFOLDERPATH="${USERPATH}/VirtualBox VMs" #Set to where your VM image files are stored
-VMFINDFILE="${VMFOLDERPATH}/*/*.vbox"
-
+TEMPDIR="${USERPATH}/sandbox/repos/github/centos7-init/temp"
+VBOXFILELIST="${TEMPDIR}/vboxbackup-list.txt"
+VMCOUNT="$(sudo cat $VBOXFILELIST | wc -l | sed -e 's/^[[:space:]]*//')"

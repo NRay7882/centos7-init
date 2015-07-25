@@ -20,20 +20,23 @@ ISOPATH="${USERPATH}/sandbox/images/iso/CentOS-7-x86_64-Everything-1503-01.iso" 
 #VMUSER="puppet" #user id for VM
 #VMPASS="puppet" #user password for VM
 #VMROOTPASS="puppet" #set VM root password
-VMFILEPATH="${USERPATH}/VirtualBox VMs" #Set to where your VM image files are stored
+VMFILEPATH="${USERPATH}/VirtualBox VMs" #Set to where your VirtualBox image directories are stored
 
 ###############################################################################
 
 #	[PARAMS] Params for status messages
+TODAYSDATE="$(date +%Y%m%d)"
+DATESTAMP="$(date +%Y%m%d-$%H%M%S)"
 NOCOLOR='\033[0m'
 GREENCOLOR='\033[1;92m'
-OKECHO="echo -e [ ${GREENCOLOR}OK!${NOCOLOR} ] -	"
+OKECHO="echo -e [ ${GREENCOLOR}OK!${NOCOLOR} | ${DATESTAMP} ] -	"
 YELLOWCOLOR='\033[01;33m'
-WARNECHO="echo -e [${YELLOWCOLOR}WARN:${NOCOLOR}] -	"
+WARNECHO="echo -e [${YELLOWCOLOR}WARN${NOCOLOR} | ${DATESTAMP} ] -	"
 REDCOLOR='\033[1;91m'
-ERRORECHO="echo -e [${REDCOLOR}ERROR${NOCOLOR}]	-	"
+ERRORECHO="echo -e [${REDCOLOR}ERROR${NOCOLOR} | ${DATESTAMP} ]	-	"
 WHITECOLOR='\033[1;53m'
-INFOECHO="echo -e [${WHITECOLOR}INFO:${NOCOLOR}] -	"
+INFOECHO="echo -e [${WHITECOLOR}INFO${NOCOLOR} | ${DATESTAMP} ] -	"
+INFOECHOTAB="echo -e \t[${WHITECOLOR}INFO${NOCOLOR} ${DATESTAMP} ] - "
 
 #	[Make temp dir]
 $INFOECHO "Beginning init process, creating temp dir..."
@@ -144,12 +147,31 @@ fi;
 if ([[ $VBOXLOCALCHECK == "installed" ]] && [ $VBOXLOCALVERSION \< $VBOXREMOTEVERSION ]); then
 	$WARNECHO "Remote version $VBOXREMOTEVERSION is newer than local version $VBOXLOCALVERSION, checking for existing VMs...";
 
-#	If VMs found, create backup first
-VBOXDEFAULTVMPATH="$USERPATH/VirtualBox VMs"
-VBOXFILESFOUND="${VBOXDEFAULTVMPATH}/*/*.vbox"
+#	If VMs found in default path, create backup first
 VBOXFILELIST="${TEMPDIR}/vboxbackup-list.txt"
-find $VBOXDEFAULTVMPATH/ -name "*/*.vbox" >> $VBOXFILELIST
+find /Users/Macbook/VirtualBox\ VMs/*/*.vbox >> $VBOXFILELIST
+VMCOUNT="$(sudo cat $VBOXFILELIST | wc -l | sed -e 's/^[[:space:]]*//')"
+if [ $VMCOUNT \> 0 ]; then
+	$INFOECHOTAB "$VMCOUNT VMs found, creating backup..."
+	BACKUPVMPATH="${RUNPATH}/VM_Backup/${TODAYSDATE}"
+	if [ -d $BACKUPVMPATH ]; then
+		while read LINE; do
+			echo ${LINE#/*.vbox}
+		done
+	fi
+else
+	mktemp -d $BACKUPVMPATH > /dev/null
+	$OKECHO "temp dir created, adding $OSXUSER to admin group..."
+fi
 
+
+
+	#while read LINE; do
+	#	""
+	#done <$VBOXFILELIST
+else
+	$OKECHO "No VMs found in default path, uninstalling VirtualBox..."
+fi
 
 #	Create items list to be removed
 	TEMPVBOXRAW="${TEMPDIR}/virtualboxitems-raw.txt"
@@ -170,7 +192,9 @@ find $VBOXDEFAULTVMPATH/ -name "*/*.vbox" >> $VBOXFILELIST
 fi;
 
 
-#	If version is older than latest, install latest
+
+
+
 
 #	Remove temp dir & all contents
 if [ -e $TEMPDIR ]; then
