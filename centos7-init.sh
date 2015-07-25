@@ -11,7 +11,8 @@
 
 #< < < < < < < < C O N F I G U R E   P A R A M S   H E R E > > > > > > > > >
 #	[PARAMS] Used for permissions, dir structure, and VM details (optional)
-OSXUSER="nraymond-mac2k14" && USERPATH="/Users/${OSXUSER}" #dev account, admin/root access
+OSXROOTPASS=$1 # Root pw for assigning permissions, sudoless access
+OSXUSER="Macbook" && USERPATH="/Users/${OSXUSER}" # Dev account, admin/root access
 ISOPATH="${USERPATH}/sandbox/images/iso/CentOS-7-x86_64-Everything-1503-01.iso" #path to VM ISO
 #VBOXNAME="pp-centos7-n01" #name for VirtualBox instance
 #VMHOSTNAME="pp-centos7-n01.base" #hostname
@@ -42,22 +43,27 @@ if [ -d $TEMPDIR ]; then
 	$WARNECHO "temp dir already found, removing..."
 	rm -rf $TEMPDIR
 	mktemp -d $TEMPDIR > /dev/null
-	$OKECHO "temp dir created, adding ${OSXUSER} to admin group..."
+	$OKECHO "temp dir created, adding $OSXUSER to admin group..."
 else
 	mktemp -d $TEMPDIR > /dev/null
-	$OKECHO "temp dir created, adding ${OSXUSER} to admin group..."
+	$OKECHO "temp dir created, adding $OSXUSER to admin group..."
 fi
 ###############################################################################
 
-#	Ensure user account is added to the admin group
-sudo dseditgroup -o edit -a $OSXUSER -t user admin > /dev/null
-$OKECHO "${OSXUSER} added, checking for CentOS ISO file..."
+#	Add dev user account to %admin group
+echo "${OSXROOTPASS}\n" sudo -S dseditgroup -o edit -a $OSXUSER -t user admin > /dev/null 2>&1
+$OKECHO "${OSXUSER} user added, ensuring passwordless sudo access..."
 
-#	Check for existing admin sudoless password line
-#%wheel	ALL=(ALL) NOPASSWD: ALL
-
-
-
+#	Ensure dev user has passwordless sudo access
+OSXSUDOLESS="^%admin\sALL=(ALL)\sNOPASSWD:\sALL"
+LINE=$(echo $OSXROOTPASS > /dev/null 2>&1 | sudo -S grep $OSXSUDOLESS /etc/sudoers) > /dev/null 2>&1
+if [ $? -eq 1 ]; then
+	$WARNECHO "No entry found for passwordless sudo, changing /etc/sudoers..."
+	echo $OSXROOTPASS > /dev/null 2>&1 | sudo -S bash -c "echo '%admin ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers"
+	$OKECHO "User $OSXUSER added to sudoers, checking for CentOS ISO..."
+else
+	$OKECHO "User $OSXUSER already has passwordless sudo, checking for CentOS ISO..."
+fi
 
 #	Check for existing CentOS ISO
 ISOSUCCESS="${OKECHO}ISO exists, checking for Homebrew..."
@@ -108,11 +114,11 @@ fi
 #	Check for current install of Virtualbox
 vboxmanage --version > /dev/null 2>&1
 if [ $? -ne 0 ]; then
-	$WARNECHO "Virtalbox not found locally, checking for the latest version..."
+	$WARNECHO "VirtualBox not found locally, checking for the latest version..."
 else
 	VBOXLOCALVERSION="$(vboxmanage --version)"
 	VBOXLOCALVERSION="$(echo $VBOXLOCALVERSION | cut -d "r" -f 1)"
-	$INFOECHO "Virtalbox local version $VBOXLOCALVERSION found, checking latest version..."
+	$INFOECHO "VirtualBox local version $VBOXLOCALVERSION found, checking latest version..."
 	VBOXLOCALCHECK="installed"
 fi
 
@@ -136,10 +142,14 @@ fi;
 
 #	If newer found, uninstall old version
 if ([[ $VBOXLOCALCHECK == "installed" ]] && [ $VBOXLOCALVERSION \< $VBOXREMOTEVERSION ]); then
-	$WARNECHO "Remote version $VBOXREMOTEVERSION is newer than local version $VBOXLOCALVERSION, uninstalling old version...";
+	$WARNECHO "Remote version $VBOXREMOTEVERSION is newer than local version $VBOXLOCALVERSION, checking for existing VMs...";
 
 #	If VMs found, create backup first
-if
+VBOXDEFAULTVMPATH="$USERPATH/VirtualBox VMs"
+VBOXFILESFOUND="${VBOXDEFAULTVMPATH}/*/*.vbox"
+VBOXFILELIST="${TEMPDIR}/vboxbackup-list.txt"
+find $VBOXDEFAULTVMPATH/ -name "*/*.vbox" >> $VBOXFILELIST
+
 
 #	Create items list to be removed
 	TEMPVBOXRAW="${TEMPDIR}/virtualboxitems-raw.txt"
@@ -160,5 +170,12 @@ if
 fi;
 
 
-
 #	If version is older than latest, install latest
+
+#	Remove temp dir & all contents
+if [ -e $TEMPDIR ]; then
+#	rm -rf $TEMPDIR
+	$OKECHO "Test dir removed"
+else
+	$OKECHO "No temp dir found"
+fi
