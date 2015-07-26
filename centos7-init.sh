@@ -25,18 +25,19 @@ VMFILEPATH="${USERPATH}/VirtualBox VMs" #Set to where your VirtualBox image dire
 ###############################################################################
 
 #	[PARAMS] Params for status messages
-TODAYSDATE="$(date +%Y%m%d)"
-DATESTAMP="$(date +%Y%m%d-$%H%M%S)"
+TODAYSDATE="$(date +%Y.%m.%d)"
+DATESTAMP="$(date +%Y.%m.%d-%H:%M:%S)"
 NOCOLOR='\033[0m'
 GREENCOLOR='\033[1;92m'
 OKECHO="echo -e [ ${GREENCOLOR}OK!${NOCOLOR} | ${DATESTAMP} ] -	"
 YELLOWCOLOR='\033[01;33m'
 WARNECHO="echo -e [${YELLOWCOLOR}WARN${NOCOLOR} | ${DATESTAMP} ] -	"
+WARNECHOTAB="echo -e \t[${YELLOWCOLOR}WARN${NOCOLOR} | ${DATESTAMP} ] -	"
 REDCOLOR='\033[1;91m'
 ERRORECHO="echo -e [${REDCOLOR}ERROR${NOCOLOR} | ${DATESTAMP} ]	-	"
 WHITECOLOR='\033[1;53m'
 INFOECHO="echo -e [${WHITECOLOR}INFO${NOCOLOR} | ${DATESTAMP} ] -	"
-INFOECHOTAB="echo -e \t[${WHITECOLOR}INFO${NOCOLOR} ${DATESTAMP} ] - "
+INFOECHOTAB="echo -e \t[${WHITECOLOR}INFO${NOCOLOR} | ${DATESTAMP} ] - "
 
 #	[Make temp dir]
 $INFOECHO "Beginning init process, creating temp dir..."
@@ -45,10 +46,10 @@ TEMPDIR="${RUNPATH}/temp"
 if [ -d $TEMPDIR ]; then
 	$WARNECHO "temp dir already found, removing..."
 	rm -rf $TEMPDIR
-	mktemp -d $TEMPDIR > /dev/null
+	mktemp -d $TEMPDIR > /dev/null || exit 1
 	$OKECHO "temp dir created, adding $OSXUSER to admin group..."
 else
-	mktemp -d $TEMPDIR > /dev/null
+	mktemp -d $TEMPDIR > /dev/null || exit 1
 	$OKECHO "temp dir created, adding $OSXUSER to admin group..."
 fi
 ###############################################################################
@@ -149,28 +150,21 @@ if ([[ $VBOXLOCALCHECK == "installed" ]] && [ $VBOXLOCALVERSION \< $VBOXREMOTEVE
 
 #	If VMs found in default path, create backup first
 VBOXFILELIST="${TEMPDIR}/vboxbackup-list.txt"
-find /Users/Macbook/VirtualBox\ VMs/*/*.vbox >> $VBOXFILELIST
+find /Users/Macbook/VirtualBox\ VMs/*/*.vbox > /dev/null 2>&1 >> $VBOXFILELIST
 VMCOUNT="$(sudo cat $VBOXFILELIST | wc -l | sed -e 's/^[[:space:]]*//')"
 if [ $VMCOUNT \> 0 ]; then
-	$INFOECHOTAB "$VMCOUNT VMs found, creating backup..."
-	BACKUPVMPATH="${RUNPATH}/VM_Backup/${TODAYSDATE}"
+	$WARNECHO "${VMCOUNT} VMs found, creating backup..."
+	BACKUPVMPATH="${RUNPATH}/vmbackup/${TODAYSDATE}"
 	if [ -d $BACKUPVMPATH ]; then
-		while read LINE; do
-			echo ${LINE#/*.vbox}
-		done
+		cp -Rf "$VMFILEPATH" "$BACKUPVMPATH"
+		rm -rf "$VMFILEPATH"
+	else
+		mkdir $BACKUPVMPATH > /dev/null || exit 1
+		xcp -Rf "$VMFILEPATH" "$BACKUPVMPATH"
+		rm -rf "$VMFILEPATH"
 	fi
 else
-	mktemp -d $BACKUPVMPATH > /dev/null
-	$OKECHO "temp dir created, adding $OSXUSER to admin group..."
-fi
-
-
-
-	#while read LINE; do
-	#	""
-	#done <$VBOXFILELIST
-else
-	$OKECHO "No VMs found in default path, uninstalling VirtualBox..."
+	$OKECHO "No VMs found, removing old VirtualBox..."
 fi
 
 #	Create items list to be removed
@@ -189,12 +183,7 @@ fi
 	do
 		grep $i $TEMPVBOXRAW -R | cut -d ":" -f 2 >> $TEMPVBOXLIST
 	done
-fi;
-
-
-
-
-
+fi
 
 #	Remove temp dir & all contents
 if [ -e $TEMPDIR ]; then

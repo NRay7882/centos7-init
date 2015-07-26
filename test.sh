@@ -11,6 +11,11 @@ ISOPATH="${USERPATH}/sandbox/images/iso/CentOS-7-x86_64-Everything-1503-01.iso" 
 #VMUSER="puppet" #user id for VM
 #VMPASS="puppet" #user password for VM
 #VMROOTPASS="puppet" #set VM root password
-TEMPDIR="${USERPATH}/sandbox/repos/github/centos7-init/temp"
+TODAYSDATE="$(date +%Y%m%d)"
+DATESTAMP="$(date +%Y%m%d-$%H%M%S)"
+RUNPATH=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)
+TEMPDIR="${RUNPATH}/temp"
 VBOXFILELIST="${TEMPDIR}/vboxbackup-list.txt"
+VBOXLOCALPATH="${USERPATH}/VirtualBox VMs"
+#find $VBOXLOCALPATH/*/*.vbox >> $VBOXFILELIST
 VMCOUNT="$(sudo cat $VBOXFILELIST | wc -l | sed -e 's/^[[:space:]]*//')"
